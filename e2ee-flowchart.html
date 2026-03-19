@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>E2EE Classification</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #00ff88;
+    --red: #ff3355;
+    --amber: #ffaa00;
+    --yellow: #ffe066;
+    --bg: #050e08;
+    --bg2: #0a1a0f;
+    --border: #00ff8820;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--green);
+    font-family: 'Share Tech Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.06) 3px, rgba(0,0,0,0.06) 4px);
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  header {
+    text-align: center;
+    padding: 40px 20px 24px;
+    position: relative;
+  }
+
+  header::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 320px; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--green), transparent);
+  }
+
+  .title {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(1.1rem, 4vw, 2rem);
+    font-weight: 900;
+    letter-spacing: 6px;
+    color: var(--green);
+    text-shadow: 0 0 30px #00ff8866, 0 0 60px #00ff8822;
+    animation: flicker 8s infinite;
+  }
+
+  @keyframes flicker {
+    0%,94%,96%,100% { opacity:1; }
+    95% { opacity:0.8; }
+  }
+
+  .subtitle {
+    font-size: 0.62rem;
+    color: #00ff8850;
+    letter-spacing: 3px;
+    margin-top: 6px;
+  }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    padding: 24px 20px 0;
+    flex-wrap: wrap;
+  }
+
+  .tab {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    padding: 8px 20px;
+    border: 1px solid #00ff8830;
+    border-radius: 3px;
+    cursor: pointer;
+    background: transparent;
+    color: #00ff8860;
+    transition: all 0.2s;
+  }
+
+  .tab:hover { color: var(--green); border-color: #00ff8866; background: #00ff8808; }
+
+  .tab.active {
+    color: #050e08;
+    background: var(--green);
+    border-color: var(--green);
+    box-shadow: 0 0 20px #00ff8840;
+  }
+
+  /* VIEWS */
+  .view { display: none; padding: 30px 20px 80px; max-width: 1100px; margin: 0 auto; }
+  .view.active { display: block; }
+
+  /* ════════════════ FLOWCHART ════════════════ */
+  .flow-center { display:flex; flex-direction:column; align-items:center; }
+
+  .fn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Orbitron', monospace;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    border-radius: 4px;
+    padding: 10px 26px;
+    text-align: center;
+  }
+
+  .fn-root { font-size:.85rem; color:var(--green); border:2px solid var(--green); box-shadow:0 0 24px #00ff8830; }
+  .fn-q    { font-size:.65rem; color:var(--yellow); border:1px solid #ffe06650; }
+  .fn-sub  { font-size:.58rem; color:#ffffff55; border:1px solid #ffffff15; padding:6px 16px; }
+
+  .vc { width:2px; height:22px; background:#00ff8828; }
+  .vc-r { background:#ff335528; }
+
+  .flow-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    width: 100%;
+    max-width: 860px;
+  }
+
+  .fcol { display:flex; flex-direction:column; align-items:center; }
+
+  .fbox {
+    border: 1px solid;
+    border-radius: 6px;
+    padding: 14px 16px;
+    width: 100%;
+  }
+
+  .fb-g { border-color:#00ff8828; background:#00ff8808; }
+  .fb-r { border-color:#ff335528; background:#ff33550a; }
+  .fb-a { border-color:#ffaa0028; background:#ffaa000a; }
+
+  .fb-title {
+    font-family: 'Orbitron', monospace;
+    font-size: .5rem;
+    letter-spacing: 2px;
+    opacity: .5;
+    margin-bottom: 10px;
+    text-align: center;
+  }
+
+  .frow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 0;
+    border-bottom: 1px solid #ffffff06;
+    font-size: .62rem;
+    letter-spacing: .5px;
+  }
+
+  .frow:last-child { border-bottom: none; }
+
+  .fdot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+  .fd-g { background:var(--green); box-shadow:0 0 5px var(--green); }
+  .fd-r { background:var(--red);   box-shadow:0 0 5px var(--red); }
+  .fd-a { background:var(--amber); box-shadow:0 0 5px var(--amber); }
+
+  .fnote { font-size:.5rem; color:#ffffff25; margin-left:auto; }
+
+  .fsub-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .fcol-label {
+    text-align: center;
+    font-size: .52rem;
+    letter-spacing: 1.5px;
+    margin-bottom: 6px;
+  }
+
+  /* ════════════════ CARDS ════════════════ */
+  .section-head {
+    font-family: 'Orbitron', monospace;
+    font-size: .62rem;
+    font-weight: 700;
+    letter-spacing: 3px;
+    padding: 6px 14px;
+    border-radius: 3px;
+    display: inline-block;
+    margin-bottom: 14px;
+  }
+
+  .sh-g { color:var(--green); border:1px solid var(--green); box-shadow:0 0 12px #00ff8820; }
+  .sh-a { color:var(--amber); border:1px solid var(--amber); box-shadow:0 0 12px #ffaa0020; }
+  .sh-r { color:var(--red);   border:1px solid var(--red);   box-shadow:0 0 12px #ff335520; }
+
+  .cards-section { margin-bottom: 36px; }
+
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 12px;
+  }
+
+  .card {
+    border: 1px solid var(--ca, #00ff8828);
+    border-radius: 8px;
+    background: var(--cb, #00ff8808);
+    padding: 16px;
+    cursor: default;
+    transition: transform .2s, box-shadow .2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 2px;
+    background: var(--cc, var(--green));
+    opacity: .5;
+  }
+
+  .card:hover { transform: translateY(-3px); box-shadow: 0 8px 28px var(--cg, #00ff8818); }
+
+  .card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+
+  .card-name {
+    font-family: 'Orbitron', monospace;
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--cc, var(--green));
+  }
+
+  .card-cat {
+    font-size: .48rem;
+    color: #ffffff30;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+  }
+
+  .cbadge {
+    font-size: .48rem;
+    font-family: 'Orbitron', monospace;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 2px 7px;
+    border-radius: 2px;
+    border: 1px solid currentColor;
+  }
+
+  .cb-g { color:var(--green); }
+  .cb-a { color:var(--amber); }
+  .cb-r { color:var(--red); }
+
+  .card-stats { display:flex; flex-direction:column; gap:5px; margin-bottom:12px; }
+
+  .cstat {
+    display: flex;
+    justify-content: space-between;
+    font-size: .58rem;
+  }
+
+  .cs-label { color:#ffffff35; }
+  .cs-val   { font-weight:700; }
+
+  .card-note {
+    font-size: .54rem;
+    color: #ffffff30;
+    line-height: 1.6;
+    border-top: 1px solid #ffffff08;
+    padding-top: 10px;
+    margin-bottom: 12px;
+  }
+
+  .share-row {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+  }
+
+  .sbtn {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: .52rem;
+    letter-spacing: .5px;
+    padding: 3px 7px;
+    border-radius: 3px;
+    border: 1px solid #ffffff18;
+    background: transparent;
+    color: #ffffff40;
+    cursor: pointer;
+    transition: all .15s;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .sbtn:hover {
+    border-color: var(--cc, var(--green));
+    color: var(--cc, var(--green));
+    background: #00ff880a;
+  }
+
+  .sbtn svg { width:9px; height:9px; fill:currentColor; }
+
+  /* ════════════════ SLIDES ════════════════ */
+  .slide-wrap { max-width: 680px; margin: 0 auto; }
+
+  .slide {
+    display: none;
+    border: 1px solid var(--sl-b, #00ff8828);
+    border-radius: 10px;
+    background: var(--sl-bg, #00ff8808);
+    padding: 34px 32px;
+    position: relative;
+    overflow: hidden;
+    animation: sin .3s ease;
+  }
+
+  @keyframes sin {
+    from { opacity:0; transform:translateX(28px); }
+    to   { opacity:1; transform:translateX(0); }
+  }
+
+  .slide.active { display: block; }
+
+  .slide::before {
+    content: '';
+    position: absolute;
+    top:0; left:0; right:0; height:3px;
+    background: var(--sl-a, var(--green));
+  }
+
+  .slide-num {
+    position: absolute;
+    top: 14px; right: 16px;
+    font-size: .52rem;
+    color: #ffffff18;
+    letter-spacing: 2px;
+  }
+
+  .sl-cat { font-size:.58rem; letter-spacing:3px; color:var(--sl-a, var(--green)); opacity:.55; margin-bottom:6px; }
+  .sl-name {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(1.3rem,4vw,1.9rem);
+    font-weight: 900;
+    letter-spacing: 3px;
+    color: var(--sl-a, var(--green));
+    text-shadow: 0 0 20px var(--sl-glow, #00ff8840);
+    margin-bottom: 16px;
+  }
+
+  .sl-emoji { font-size: 2rem; margin-bottom: 14px; }
+
+  .sl-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 18px;
+  }
+
+  .sl-stat {
+    border: 1px solid #ffffff0a;
+    border-radius: 4px;
+    padding: 9px 11px;
+    background: #ffffff04;
+  }
+
+  .sl-stat-l { font-size:.48rem; color:#ffffff30; letter-spacing:2px; margin-bottom:3px; }
+  .sl-stat-v { font-size:.68rem; font-weight:700; letter-spacing:1px; }
+
+  .sl-desc {
+    font-size: .62rem;
+    line-height: 1.9;
+    color: #ffffff60;
+    margin-bottom: 22px;
+  }
+
+  .sl-share {
+    display: flex;
+    gap: 7px;
+    flex-wrap: wrap;
+    border-top: 1px solid #ffffff08;
+    padding-top: 14px;
+    align-items: center;
+  }
+
+  .sl-share-label { font-size:.5rem; color:#ffffff25; letter-spacing:1px; margin-right:2px; }
+
+  .sl-sbtn {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: .58rem;
+    letter-spacing: 1px;
+    padding: 5px 12px;
+    border-radius: 3px;
+    border: 1px solid #ffffff18;
+    background: transparent;
+    color: #ffffff45;
+    cursor: pointer;
+    transition: all .15s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .sl-sbtn:hover {
+    border-color: var(--sl-a, var(--green));
+    color: var(--sl-a, var(--green));
+    background: #00ff880a;
+  }
+
+  .sl-sbtn svg { width:11px; height:11px; fill:currentColor; }
+
+  /* NAV */
+  .slide-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin-top: 18px;
+  }
+
+  .nav-btn {
+    font-family: 'Orbitron', monospace;
+    font-size: .58rem;
+    letter-spacing: 2px;
+    padding: 7px 18px;
+    border: 1px solid #00ff8840;
+    border-radius: 3px;
+    background: transparent;
+    color: var(--green);
+    cursor: pointer;
+    transition: all .2s;
+  }
+
+  .nav-btn:hover { background:#00ff8810; }
+  .nav-btn:disabled { opacity:.2; cursor:default; }
+
+  .sdots { display:flex; gap:5px; align-items:center; }
+
+  .sdot {
+    width:6px; height:6px;
+    border-radius:50%;
+    background:#00ff8828;
+    cursor:pointer;
+    transition:all .2s;
+  }
+
+  .sdot.on { background:var(--green); box-shadow:0 0 5px var(--green); width:16px; border-radius:3px; }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom:28px; left:50%; transform:translateX(-50%) translateY(16px);
+    background:#0c2216;
+    border:1px solid var(--green);
+    color:var(--green);
+    font-size:.6rem;
+    letter-spacing:2px;
+    padding:9px 18px;
+    border-radius:4px;
+    opacity:0;
+    transition:all .25s;
+    z-index:99999;
+    pointer-events:none;
+    white-space:nowrap;
+  }
+
+  .toast.on { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* ── FOOTER ── */
+  footer {
+    margin-top: 60px;
+    padding: 0 20px 40px;
+  }
+
+  .footer-line {
+    width: 100%;
+    max-width: 700px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #00ff8840, transparent);
+    margin: 0 auto 28px;
+  }
+
+  .footer-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    text-align: center;
+  }
+
+  .footer-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .footer-symbol {
+    font-size: 1rem;
+    color: var(--green);
+    text-shadow: 0 0 12px var(--green);
+    animation: pulse 3s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%,100% { opacity:1; text-shadow: 0 0 12px var(--green); }
+    50%      { opacity:0.6; text-shadow: 0 0 4px var(--green); }
+  }
+
+  .footer-name {
+    font-family: 'Orbitron', monospace;
+    font-size: .85rem;
+    font-weight: 900;
+    letter-spacing: 4px;
+    color: var(--green);
+  }
+
+  .footer-socials {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: 4px 0;
+  }
+
+  .fsocial {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 20px;
+    border-radius: 40px;
+    border: 1px solid;
+    text-decoration: none;
+    transition: all .2s;
+    backdrop-filter: blur(8px);
+  }
+
+  .fsocial svg {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+    fill: currentColor;
+  }
+
+  .fsocial-tg {
+    color: #29a8e8;
+    border-color: #29a8e840;
+    background: rgba(41,168,232,0.08);
+  }
+
+  .fsocial-tg:hover {
+    border-color: #29a8e870;
+    background: rgba(41,168,232,0.15);
+    box-shadow: 0 0 16px rgba(41,168,232,0.2);
+    transform: translateY(-2px);
+  }
+
+  .fsocial-yt {
+    color: #ff4444;
+    border-color: #ff444440;
+    background: rgba(255,68,68,0.08);
+  }
+
+  .fsocial-yt:hover {
+    border-color: #ff444470;
+    background: rgba(255,68,68,0.15);
+    box-shadow: 0 0 16px rgba(255,68,68,0.2);
+    transform: translateY(-2px);
+  }
+
+  .fsocial-text {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .fsocial-action {
+    font-family: 'Orbitron', monospace;
+    font-size: .58rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+  }
+
+  .fsocial-handle {
+    font-size: .46rem;
+    letter-spacing: .5px;
+    opacity: .45;
+  }
+
+  .footer-copy {
+    font-family: 'Orbitron', monospace;
+    font-size: .58rem;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: #00ff8860;
+  }
+
+  .footer-note {
+    font-size: .54rem;
+    color: #ffffff28;
+    letter-spacing: .5px;
+    line-height: 1.9;
+    max-width: 560px;
+  }
+
+  .footer-tags {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 4px;
+  }
+
+  .ftag {
+    font-size: .48rem;
+    letter-spacing: 1.5px;
+    padding: 3px 9px;
+    border: 1px solid #00ff8820;
+    border-radius: 2px;
+    color: #00ff8840;
+  }
+
+  /* ── CONCLUSION BANNER ── */
+  .conclusion {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 20px 20px 0;
+    max-width: 700px;
+    margin: 0 auto;
+  }
+
+  .verdict-tag {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid;
+    border-radius: 5px;
+    padding: 10px 18px;
+    flex: 1;
+    min-width: 200px;
+    max-width: 320px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .verdict-tag::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: .04;
+    background: currentColor;
+  }
+
+  .vt-secure {
+    color: var(--green);
+    border-color: #00ff8840;
+    box-shadow: 0 0 18px #00ff8815;
+  }
+
+  .vt-weak {
+    color: var(--red);
+    border-color: #ff335540;
+    box-shadow: 0 0 18px #ff335515;
+  }
+
+  .vt-icon { font-size: 1.4rem; flex-shrink: 0; }
+
+  .vt-body { display: flex; flex-direction: column; gap: 2px; }
+
+  .vt-label {
+    font-family: 'Orbitron', monospace;
+    font-size: .48rem;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    opacity: .55;
+  }
+
+  .vt-name {
+    font-family: 'Orbitron', monospace;
+    font-size: .8rem;
+    font-weight: 900;
+    letter-spacing: 2px;
+  }
+
+  .vt-reason {
+    font-size: .5rem;
+    letter-spacing: .5px;
+    opacity: .5;
+    margin-top: 1px;
+  }
+
+  /* crown / skull badge on cards */
+  .crown-badge {
+    position: absolute;
+    top: -1px; left: 50%; transform: translateX(-50%);
+    font-family: 'Orbitron', monospace;
+    font-size: .42rem;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+    padding: 2px 10px;
+    border-radius: 0 0 4px 4px;
+    border: 1px solid;
+    border-top: none;
+    white-space: nowrap;
+    z-index: 2;
+  }
+
+  .cb-secure { color: var(--green); border-color: #00ff8840; background: #050e08; }
+  .cb-weak   { color: var(--red);   border-color: #ff335540; background: #050e08; }
+
+  /* autoplay bar */
+  .auto-bar-wrap {
+    width: 100%;
+    max-width: 680px;
+    margin: 10px auto 0;
+    height: 2px;
+    background: #00ff8815;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .auto-bar {
+    height: 100%;
+    width: 0%;
+    background: var(--green);
+    border-radius: 2px;
+    transition: width linear;
+  }
+
+  .auto-label {
+    text-align: center;
+    font-size: .48rem;
+    color: #00ff8840;
+    letter-spacing: 2px;
+    margin-top: 6px;
+  }
+
+  @media(max-width:520px) {
+    .flow-cols { grid-template-columns:1fr; }
+    .fsub-cols { grid-template-columns:1fr; }
+    .slide { padding:22px 14px; }
+    .sl-grid { grid-template-columns:1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title">E2EE CLASSIFICATION</div>
+  <div class="subtitle">END-TO-END ENCRYPTION · ALL MAJOR PLATFORMS · 2026</div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="sw('flowchart',this)">FLOWCHART</button>
+  <button class="tab" onclick="sw('cards',this)">CARD VIEW</button>
+  <button class="tab" onclick="sw('slides',this)">SLIDES</button>
+</div>
+
+<div class="conclusion">
+  <div class="verdict-tag vt-secure">
+    <div class="vt-icon">👑</div>
+    <div class="vt-body">
+      <div class="vt-label">MOST SECURE</div>
+      <div class="vt-name">SESSION</div>
+      <div class="vt-reason">E2EE default · No phone number · Decentralised · Zero metadata</div>
+    </div>
+  </div>
+  <div class="verdict-tag vt-weak">
+    <div class="vt-icon">💀</div>
+    <div class="vt-body">
+      <div class="vt-label">MOST WEAK</div>
+      <div class="vt-name">DISCORD</div>
+      <div class="vt-reason">Zero E2EE · All messages stored · No privacy layer at all</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ FLOWCHART ════════════ -->
+<div id="view-flowchart" class="view active">
+  <div class="flow-center">
+
+    <div class="fn fn-root">IS E2EE ON BY DEFAULT?</div>
+    <div class="vc"></div>
+
+    <div class="flow-cols">
+
+      <!-- YES -->
+      <div class="fcol">
+        <div class="fn" style="color:var(--green);border:1px solid #00ff8860;margin-bottom:4px">✅ YES</div>
+        <div class="vc"></div>
+        <div class="fn fn-q" style="margin-bottom:10px">MESSAGING APPS</div>
+        <div class="fn fn-sub" style="margin-bottom:12px">METADATA COLLECTED?</div>
+        <div class="fsub-cols" style="margin-bottom:16px">
+          <div>
+            <div class="fcol-label" style="color:var(--green)">LOW</div>
+            <div class="fbox fb-g">
+              <div class="fb-title" style="color:var(--green)">PRIVATE</div>
+              <div class="frow"><div class="fdot fd-g"></div>SIGNAL</div>
+              <div class="frow"><div class="fdot fd-g"></div>SESSION</div>
+            </div>
+          </div>
+          <div>
+            <div class="fcol-label" style="color:var(--amber)">HIGH</div>
+            <div class="fbox fb-a">
+              <div class="fb-title" style="color:var(--amber)">MID TRUST</div>
+              <div class="frow"><div class="fdot fd-a"></div>WHATSAPP<span class="fnote">Meta metadata</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="fn fn-q" style="margin-bottom:10px">EMAIL</div>
+        <div class="fbox fb-g" style="width:100%">
+          <div class="fb-title" style="color:var(--green)">E2EE DEFAULT</div>
+          <div class="frow"><div class="fdot fd-g"></div>PROTONMAIL</div>
+          <div class="frow"><div class="fdot fd-g"></div>TUTA (TUTANOTA)</div>
+          <div style="font-size:.48rem;color:#ffffff25;margin-top:8px;line-height:1.6">⚠ E2EE guaranteed only between same-service users</div>
+        </div>
+      </div>
+
+      <!-- NO -->
+      <div class="fcol">
+        <div class="fn" style="color:var(--red);border:1px solid #ff335560;margin-bottom:4px">❌ NO</div>
+        <div class="vc vc-r"></div>
+        <div class="fn fn-q" style="margin-bottom:10px">MESSAGING APPS</div>
+        <div class="fn fn-sub" style="margin-bottom:12px">OPTIONAL E2EE?</div>
+        <div class="fsub-cols" style="margin-bottom:16px">
+          <div>
+            <div class="fcol-label" style="color:var(--amber)">OPT-IN</div>
+            <div class="fbox fb-a">
+              <div class="fb-title" style="color:var(--amber)">CONDITIONAL</div>
+              <div class="frow"><div class="fdot fd-a"></div><span style="font-size:.6rem">TELEGRAM</span><span class="fnote">secret chat</span></div>
+              <div class="frow"><div class="fdot fd-a"></div><span style="font-size:.6rem">GOOGLE MSG</span><span class="fnote">RCS only</span></div>
+            </div>
+          </div>
+          <div>
+            <div class="fcol-label" style="color:var(--red)">NONE</div>
+            <div class="fbox fb-r">
+              <div class="fb-title" style="color:var(--red)">ZERO E2EE</div>
+              <div class="frow"><div class="fdot fd-r"></div><span style="font-size:.6rem">DISCORD</span></div>
+              <div class="frow"><div class="fdot fd-r"></div><span style="font-size:.6rem">SNAPCHAT</span></div>
+              <div class="frow"><div class="fdot fd-r"></div><span style="font-size:.6rem">INSTAGRAM</span><span class="fnote">dropped May 8</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="fn fn-q" style="margin-bottom:10px">EMAIL</div>
+        <div class="fbox fb-r" style="width:100%">
+          <div class="fb-title" style="color:var(--red)">TLS ONLY — SERVER READS MAIL</div>
+          <div class="frow"><div class="fdot fd-r"></div>GMAIL</div>
+          <div class="frow"><div class="fdot fd-r"></div>OUTLOOK</div>
+          <div class="frow"><div class="fdot fd-r"></div>YAHOO MAIL</div>
+          <div class="frow"><div class="fdot fd-r"></div>ICLOUD MAIL</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ CARDS ════════════ -->
+<div id="view-cards" class="view">
+  <div class="cards-section">
+    <div class="section-head sh-g">✅ E2EE DEFAULT — HIGH TRUST</div>
+    <div class="cards-grid" id="cg-green"></div>
+  </div>
+  <div class="cards-section">
+    <div class="section-head sh-a">⚠️ E2EE DEFAULT — CONDITIONAL / HIGH METADATA</div>
+    <div class="cards-grid" id="cg-amber"></div>
+  </div>
+  <div class="cards-section">
+    <div class="section-head sh-r">❌ NO E2EE / OPT-IN ONLY</div>
+    <div class="cards-grid" id="cg-red"></div>
+  </div>
+</div>
+
+<!-- ════════════ SLIDES ════════════ -->
+<div id="view-slides" class="view">
+  <div class="slide-wrap">
+    <div id="slide-track"></div>
+    <div class="auto-bar-wrap"><div class="auto-bar" id="auto-bar"></div></div>
+    <div class="auto-label" id="auto-label">● AUTOPLAYING</div>
+    <div class="slide-nav">
+      <button class="nav-btn" id="btn-prev" onclick="go(-1)">◀ PREV</button>
+      <div class="sdots" id="sdots"></div>
+      <button class="nav-btn" id="btn-next" onclick="go(1)">NEXT ▶</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<footer>
+  <div class="footer-line"></div>
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <span class="footer-symbol">▲</span>
+      <span class="footer-name">FOREST<span style="color:#00ff8866">ARMY</span></span>
+    </div>
+
+    <div class="footer-socials">
+      <a href="https://t.me/forestarmy" target="_blank" class="fsocial fsocial-tg">
+        <svg viewBox="0 0 24 24"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+        <div class="fsocial-text">
+          <span class="fsocial-action">JOIN FORESTARMY</span>
+          <span class="fsocial-handle">t.me/forestarmy</span>
+        </div>
+      </a>
+      <a href="https://youtube.com/@forestarmy" target="_blank" class="fsocial fsocial-yt">
+        <svg viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+        <div class="fsocial-text">
+          <span class="fsocial-action">SUBSCRIBE</span>
+          <span class="fsocial-handle">youtube.com/@forestarmy</span>
+        </div>
+      </a>
+    </div>
+
+    <div class="footer-copy">© FORESTARMY 2026</div>
+    <div class="footer-note">
+      All data reflects latest available research across public security audits,<br>
+      platform privacy policies, independent researchers, and AI analysis.<br>
+      Classification updated continuously as platforms change.
+    </div>
+    <div class="footer-tags">
+      <span class="ftag">SIGNAL PROTOCOL</span>
+      <span class="ftag">ZERO-KNOWLEDGE</span>
+      <span class="ftag">METADATA ANALYSIS</span>
+      <span class="ftag">PRIVACY RESEARCH</span>
+      <span class="ftag">2026 DATA</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+const DATA = [
+  { name:"SIGNAL",     cat:"MESSAGING", tier:"green", e2ee:"✅ YES — DEFAULT",   meta:"🟢 MINIMAL", server:"❌ NO CLOUD",       trust:"🟢 BEST",       note:"Open source. No phone metadata sold. Sealed sender. Disappearing messages. Gold standard for private comms.", ac:"#00ff88", gw:"#00ff8830", bg:"#00ff8808", br:"#00ff8828" },
+  { name:"SESSION",    cat:"MESSAGING", tier:"green", e2ee:"✅ YES — DEFAULT",   meta:"🟢 MINIMAL", server:"❌ NO CENTRAL",     trust:"🟢 BEST",       note:"No phone number required. Decentralised network. Better anonymity than Signal — no account linked to identity.", ac:"#00ff88", gw:"#00ff8830", bg:"#00ff8808", br:"#00ff8828" },
+  { name:"PROTONMAIL", cat:"EMAIL",     tier:"green", e2ee:"✅ YES — DEFAULT",   meta:"🟢 LOW",     server:"✅ ZERO-KNOWLEDGE", trust:"🟢 BEST",       note:"Switzerland-based. Even Proton staff cannot read your mail. E2EE guaranteed only between Proton users.", ac:"#00ff88", gw:"#00ff8830", bg:"#00ff8808", br:"#00ff8828" },
+  { name:"TUTA",       cat:"EMAIL",     tier:"green", e2ee:"✅ YES — DEFAULT",   meta:"🟢 LOW",     server:"✅ ZERO-KNOWLEDGE", trust:"🟢 BEST",       note:"Germany-based (Tutanota). Encrypts subject lines too — rare. Open source. Strong privacy law backing.", ac:"#00ff88", gw:"#00ff8830", bg:"#00ff8808", br:"#00ff8828" },
+  { name:"WHATSAPP",   cat:"MESSAGING", tier:"amber", e2ee:"✅ YES — DEFAULT",   meta:"🔴 HIGH",    server:"⚠️ BACKUP RISK",   trust:"🟡 MID",        note:"Signal Protocol used correctly. But Meta owns who-talks-to-who data. Cloud backups can be unencrypted.", ac:"#ffaa00", gw:"#ffaa0030", bg:"#ffaa000a", br:"#ffaa0028" },
+  { name:"GOOGLE MSG", cat:"MESSAGING", tier:"amber", e2ee:"⚠️ CONDITIONAL",    meta:"🔴 HIGH",    server:"⚠️ SMS FALLBACK",  trust:"🟡 MID",        note:"RCS E2EE only when both sides use Google Messages with RCS on. Silently falls back to unencrypted SMS.", ac:"#ffaa00", gw:"#ffaa0030", bg:"#ffaa000a", br:"#ffaa0028" },
+  { name:"TELEGRAM",   cat:"MESSAGING", tier:"red",   e2ee:"❌ NOT DEFAULT",     meta:"🔴 MEDIUM",  server:"❌ STORED",         trust:"🔴 WEAK",       note:"Regular chats stored on Telegram's servers in plain text. Secret Chats are E2EE but hidden opt-in. Most users never find them.", ac:"#ff3355", gw:"#ff335530", bg:"#ff33550a", br:"#ff335528" },
+  { name:"DISCORD",    cat:"MESSAGING", tier:"red",   e2ee:"❌ NONE",            meta:"🔴 HIGH",    server:"❌ STORED",         trust:"🔴 NONE",       note:"Zero encryption. All messages stored on Discord's servers indefinitely. Not designed for privacy at all.", ac:"#ff3355", gw:"#ff335530", bg:"#ff33550a", br:"#ff335528" },
+  { name:"SNAPCHAT",   cat:"MESSAGING", tier:"red",   e2ee:"❌ NONE",            meta:"🔴 HIGH",    server:"❌ STORED",         trust:"🔴 NONE",       note:"Disappearing messages are a UI illusion. Snap stores them server-side. No E2EE of any kind.", ac:"#ff3355", gw:"#ff335530", bg:"#ff33550a", br:"#ff335528" },
+  { name:"INSTAGRAM",  cat:"MESSAGING", tier:"red",   e2ee:"❌ DROPPED",         meta:"🔴 HIGH",    server:"❌ STORED",         trust:"🔴 NONE",       note:"Dropped E2EE on May 8, 2026. Meta can now scan DM content. Full ad-targeting integration enabled.", ac:"#ff3355", gw:"#ff335530", bg:"#ff33550a", br:"#ff335528" },
+  { name:"GMAIL",      cat:"EMAIL",     tier:"red",   e2ee:"❌ NONE",            meta:"🔴 HIGH",    server:"❌ GOOGLE READS",   trust:"🔴 NONE",       note:"TLS in transit only. Google can access all stored mail. Historically used for ad-profiling.", ac:"#ff3355", gw:"#ff335530", bg:"#ff33550a", br:"#ff335528" },
+  { name:"OUTLOOK",    cat:"EMAIL",     tier:"red",   e2ee:"❌ NONE",            meta:"🔴 HIGH",    server:"❌ MS READS",       trust:"🔴 NONE",       note:"TLS only. Microsoft stores and can access all email. S/MIME optional but not consumer-friendly.", ac:"#ff3355", gw:"#ff335530", bg:"#ff33550a", br:"#ff335528" },
+  { name:"YAHOO MAIL", cat:"EMAIL",     tier:"red",   e2ee:"❌ NONE",            meta:"🔴 HIGH",    server:"❌ STORED",         trust:"🔴 NONE",       note:"No E2EE. Yahoo cooperated with mass surveillance programs and has suffered major breaches (3 billion accounts).", ac:"#ff3355", gw:"#ff335530", bg:"#ff33550a", br:"#ff335528" },
+  { name:"ICLOUD MAIL",cat:"EMAIL",     tier:"red",   e2ee:"❌ NONE",            meta:"🔴 HIGH",    server:"❌ APPLE READS",    trust:"🔴 NONE",       note:"TLS only. Apple can access iCloud Mail. Don't confuse with iMessage — mail gets no such protection.", ac:"#ff3355", gw:"#ff335530", bg:"#ff33550a", br:"#ff335528" }
+];
+
+/* ── SHARE ── */
+function getURL(){ return window.location.href; }
+
+function share(name, e2ee, trust, via){
+  const url = getURL();
+  const txt = `${name} — E2EE: ${e2ee.replace(/[✅❌⚠️🟢🔴🟡]/g,'').trim()} | Trust: ${trust.replace(/[✅❌⚠️🟢🔴🟡]/g,'').trim()} | E2EE Classification 2026`;
+  if(via==='copy'){
+    navigator.clipboard.writeText(url).then(()=>toast('URL COPIED'));
+  } else if(via==='twitter'){
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(txt)}&url=${encodeURIComponent(url)}`,'_blank');
+  } else if(via==='wa'){
+    window.open(`https://wa.me/?text=${encodeURIComponent(txt+'\n'+url)}`,'_blank');
+  } else if(via==='tg'){
+    window.open(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(txt)}`,'_blank');
+  } else if(via==='native'){
+    if(navigator.share) navigator.share({title:name+' — E2EE',text:txt,url});
+    else navigator.clipboard.writeText(url).then(()=>toast('URL COPIED'));
+  }
+}
+
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('on');
+  setTimeout(()=>t.classList.remove('on'),2000);
+}
+
+/* ── SVG ICONS ── */
+const I = {
+  x:   `<svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`,
+  wa:  `<svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>`,
+  tg:  `<svg viewBox="0 0 24 24"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>`,
+  cp:  `<svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>`,
+  sh:  `<svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>`
+};
+
+function shareBtns(a, cls, tag){
+  const n=a.name, e=a.e2ee, t=a.trust;
+  return `
+    <button class="${cls}" onclick="share('${n}','${e.replace(/'/g,'')}}','${t.replace(/'/g,'')}','twitter')">${I.x} X</button>
+    <button class="${cls}" onclick="share('${n}','${e.replace(/'/g,'')}','${t.replace(/'/g,'')}','wa')">${I.wa} WA</button>
+    <button class="${cls}" onclick="share('${n}','${e.replace(/'/g,'')}','${t.replace(/'/g,'')}','tg')">${I.tg} TG</button>
+    <button class="${cls}" onclick="share('${n}','${e.replace(/'/g,'')}','${t.replace(/'/g,'')}','copy')">${I.cp} COPY</button>
+    <button class="${cls}" onclick="share('${n}','${e.replace(/'/g,'')}','${t.replace(/'/g,'')}','native')">${I.sh} SHARE</button>
+  `;
+}
+
+/* ── BUILD CARDS ── */
+function buildCards(){
+  const tiers = {green:{id:'cg-green',badge:'SECURE',bc:'cb-g'}, amber:{id:'cg-amber',badge:'CONDITIONAL',bc:'cb-a'}, red:{id:'cg-red',badge:'UNSAFE',bc:'cb-r'}};
+  Object.entries(tiers).forEach(([tier,cfg])=>{
+    const el = document.getElementById(cfg.id);
+    el.innerHTML = DATA.filter(a=>a.tier===tier).map(a=>`
+      <div class="card" style="--ca:${a.br};--cb:${a.bg};--cc:${a.ac};--cg:${a.gw};${a.name==='SESSION'?'padding-top:24px;':a.name==='DISCORD'?'padding-top:24px;':''}">
+        ${a.name==='SESSION' ? '<div class="crown-badge cb-secure">👑 MOST SECURE</div>' : ''}
+        ${a.name==='DISCORD' ? '<div class="crown-badge cb-weak">💀 MOST WEAK</div>' : ''}
+        <div class="card-top">
+          <div class="card-name">${a.name}</div>
+          <div class="cbadge ${cfg.bc}">${cfg.badge}</div>
+        </div>
+        <div class="card-cat">${a.cat}</div>
+        <div class="card-stats">
+          <div class="cstat"><span class="cs-label">E2EE</span><span class="cs-val" style="color:${a.ac}">${a.e2ee}</span></div>
+          <div class="cstat"><span class="cs-label">METADATA</span><span class="cs-val">${a.meta}</span></div>
+          <div class="cstat"><span class="cs-label">SERVER</span><span class="cs-val">${a.server}</span></div>
+          <div class="cstat"><span class="cs-label">TRUST</span><span class="cs-val">${a.trust}</span></div>
+        </div>
+        <div class="card-note">${a.note}</div>
+        <div class="share-row">${shareBtns(a,'sbtn','card')}</div>
+      </div>
+    `).join('');
+  });
+}
+
+/* ── BUILD SLIDES ── */
+let cur = 0;
+
+function buildSlides(){
+  const track = document.getElementById('slide-track');
+  const dots  = document.getElementById('sdots');
+  const emoji = {green:'🟢', amber:'🟡', red:'🔴'};
+
+  track.innerHTML = DATA.map((a,i)=>`
+    <div class="slide ${i===0?'active':''}"
+      style="--sl-b:${a.br};--sl-bg:${a.bg};--sl-a:${a.ac};--sl-glow:${a.gw}">
+      <div class="slide-num">${String(i+1).padStart(2,'0')} / ${String(DATA.length).padStart(2,'0')}</div>
+      ${a.name==='SESSION' ? '<div style="position:absolute;top:0;left:50%;transform:translateX(-50%);font-family:Orbitron,monospace;font-size:.42rem;font-weight:900;letter-spacing:1.5px;padding:2px 14px;border-radius:0 0 4px 4px;border:1px solid #00ff8840;border-top:none;background:#050e08;color:var(--green);white-space:nowrap;z-index:2">👑 MOST SECURE</div>' : ''}
+      ${a.name==='DISCORD' ? '<div style="position:absolute;top:0;left:50%;transform:translateX(-50%);font-family:Orbitron,monospace;font-size:.42rem;font-weight:900;letter-spacing:1.5px;padding:2px 14px;border-radius:0 0 4px 4px;border:1px solid #ff335540;border-top:none;background:#050e08;color:var(--red);white-space:nowrap;z-index:2">💀 MOST WEAK</div>' : ''}
+      <div class="sl-cat">${a.cat}</div>
+      <div class="sl-name">${a.name}</div>
+      <div class="sl-emoji">${emoji[a.tier]}</div>
+      <div class="sl-grid">
+        <div class="sl-stat">
+          <div class="sl-stat-l">E2EE DEFAULT</div>
+          <div class="sl-stat-v" style="color:${a.ac}">${a.e2ee.replace(/[✅❌⚠️]/g,'').split('—')[0].trim()}</div>
+        </div>
+        <div class="sl-stat">
+          <div class="sl-stat-l">TRUST</div>
+          <div class="sl-stat-v" style="color:${a.ac}">${a.trust.replace(/[🟢🟡🔴]/g,'').trim()}</div>
+        </div>
+        <div class="sl-stat">
+          <div class="sl-stat-l">METADATA</div>
+          <div class="sl-stat-v">${a.meta.replace(/[🟢🔴⚠️]/g,'').trim()}</div>
+        </div>
+        <div class="sl-stat">
+          <div class="sl-stat-l">SERVER</div>
+          <div class="sl-stat-v">${a.server.replace(/[✅❌⚠️]/g,'').trim()}</div>
+        </div>
+      </div>
+      <div class="sl-desc">${a.note}</div>
+      <div class="sl-share">
+        <span class="sl-share-label">${a.tier==='red'?'WARN OTHERS:':'SHARE:'}</span>
+        ${shareBtns(a,'sl-sbtn','slide')}
+      </div>
+    </div>
+  `).join('');
+
+  dots.innerHTML = DATA.map((_,i)=>`<div class="sdot ${i===0?'on':''}" onclick="goTo(${i})"></div>`).join('');
+  updNav();
+}
+
+function go(d){ goTo(cur+d); }
+
+function goTo(n){
+  const slides = document.querySelectorAll('.slide');
+  const dots   = document.querySelectorAll('.sdot');
+  if(n<0||n>=slides.length) return;
+  slides[cur].classList.remove('active');
+  dots[cur].classList.remove('on');
+  cur=n;
+  slides[cur].classList.add('active');
+  dots[cur].classList.add('on');
+  updNav();
+}
+
+function updNav(){
+  document.getElementById('btn-prev').disabled = cur===0;
+  document.getElementById('btn-next').disabled = cur===DATA.length-1;
+}
+
+document.addEventListener('keydown',e=>{
+  if(!document.getElementById('view-slides').classList.contains('active')) return;
+  if(e.key==='ArrowRight') go(1);
+  if(e.key==='ArrowLeft')  go(-1);
+});
+
+/* ── VIEW SWITCH (handled below with autoplay) ── */
+
+/* ── INIT ── */
+buildCards();
+buildSlides();
+
+/* ── AUTOPLAY ── */
+let autoTimer = null;
+
+function startAuto(){
+  stopAuto();
+  animBar();
+  autoTimer = setInterval(()=>{
+    const next = cur < DATA.length - 1 ? cur + 1 : 0;
+    goTo(next);
+    animBar();
+  }, 3500);
+  document.getElementById('auto-label').style.opacity = '1';
+}
+
+function stopAuto(){
+  if(autoTimer){ clearInterval(autoTimer); autoTimer = null; }
+  const bar = document.getElementById('auto-bar');
+  if(bar){ bar.style.transition='none'; bar.style.width='0%'; }
+  document.getElementById('auto-label').style.opacity = '0';
+}
+
+function animBar(){
+  const bar = document.getElementById('auto-bar');
+  if(!bar) return;
+  bar.style.transition = 'none';
+  bar.style.width = '0%';
+  requestAnimationFrame(()=>{
+    requestAnimationFrame(()=>{
+      bar.style.transition = 'width 3.5s linear';
+      bar.style.width = '100%';
+    });
+  });
+}
+
+// Start autoplay when slides tab is opened
+const origSw = sw;
+function sw(name, btn){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  btn.classList.add('active');
+  if(name==='slides') startAuto();
+  else stopAuto();
+}
+
+// Pause on manual interaction
+document.getElementById('btn-prev').addEventListener('click', ()=>{ stopAuto(); });
+document.getElementById('btn-next').addEventListener('click', ()=>{ stopAuto(); });
+document.querySelectorAll && document.addEventListener('click', e=>{
+  if(e.target.classList.contains('sdot')){ stopAuto(); }
+});
+</script>
+</body>
+</html>
